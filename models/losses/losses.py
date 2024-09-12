@@ -29,8 +29,8 @@ class L1TemporalLoss(LossModule):
         self.loss = nn.L1Loss(reduction='mean')
     
     def forward(self, info):
-        self.loss = self.loss(info[self.key_output], info[self.key_target]) 
-        return self.loss
+        loss = self.loss(info[self.key_output], info[self.key_target]) 
+        return loss
     
 
 class L2TemporalLoss(LossModule):
@@ -42,17 +42,17 @@ class L2TemporalLoss(LossModule):
         self.loss = nn.MSELoss(reduction='mean')
     
     def forward(self, info):
-        self.loss = self.loss(info[self.key_output], info[self.key_target]) 
-        return self.loss
+        loss = self.loss(info[self.key_output], info[self.key_target]) 
+        return loss
 
 
 class AuralossLoss(LossModule):
-    def __init__(self, *config, key_output: str, key_target: str):
-        super().__init__(name = 'aura')
+    def __init__(self, key_output: str, key_target: str, **config):
+        super().__init__(name = 'aura_loss')
 
         self.key_output = key_output
         self.key_target = key_target
-        self.loss = MultiResolutionSTFTLoss(*config)
+        self.loss = MultiResolutionSTFTLoss(**config)
 
     def forward(self, info):
         loss = self.loss(info[self.key_output], info[self.key_target])

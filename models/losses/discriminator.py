@@ -104,7 +104,7 @@ class Discriminator(nn.Module):
             featur_loss += F.l1_loss(x, x_hat)/torch.norm(x,1)
         
         return {
-            'featur_loss': featur_loss,
+            'feature_loss': featur_loss,
             'generator_loss': generator_loss,
             'discriminator_loss': discriminator_loss + generator_loss, # TO SCALE GEN LOSS ACCORDINGLY IN THE BALANCER
         }

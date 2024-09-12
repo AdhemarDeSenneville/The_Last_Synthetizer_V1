@@ -15,14 +15,14 @@ class NoBalancer:
     def __init__(self, weights: tp.Dict[str, float]):
         self.weights = weights
 
-    def backward(self, losses: tp.Dict[str, torch.Tensor], input: torch.Tensor):
+    def backward(self, losses: tp.Dict[str, torch.Tensor], retain_graph=False):
 
         total_loss = 0.0
 
         for name, value in losses.items():
             total_loss += value * self.weights[name]
         
-        total_loss.backward()
+        total_loss.backward(retain_graph = retain_graph)
 
 
 class Balancer:

@@ -2,7 +2,7 @@
 # A bit complicated, but modularity will be useful for my future projects
 
 from balancer import Balancer, NoBalancer
-from losses import L1TemporalLoss, L2TemporalLoss, AuralossLoss
+from losses import L1TemporalLoss, L2TemporalLoss, AuralossLoss, KLDivergenceLoss
 from discriminator import Discriminator
 
 
@@ -41,7 +41,7 @@ cfg = {
     'Discriminator':{
         'weight':1,
         'balancer': True,
-        'type':'Spectrogram_VGGStyle',
+        #'type':'Spectrogram_VGGStyle',
     },
     'FeatureLoss':{
         'weight':1,
@@ -77,9 +77,9 @@ class CraftLosses:
         for loss_name, loss_config in losses_config.items():
 
             weight = loss_config.pop('weight')
-            is_balancer = losses_config.pop('balancer')
+            is_balancer = loss_config.pop('balancer')
 
-            loss = globals()[loss_name](*loss_config)
+            loss = globals()[loss_name](**loss_config)
 
             self.losses.append(loss)
 
@@ -93,10 +93,12 @@ class CraftLosses:
 
     def backward(self, info):
 
-        all_losses = self.discriminator.loss(self, info['x'], info['x_hat'])
+        all_losses = self.discriminator.loss(info['x'], info['x_hat'])
 
         for loss in self.losses:
             all_losses[loss.name] = loss(info)
 
-        self.balancer.backward(all_losses[self.balancer_config.keys()], info['x_hat'])
-        self.nobalancer.backward((all_losses[self.nobalancer_config.keys()]))
+        self.all_losses = all_losses
+        
+        self.nobalancer.backward({key: all_losses[key] for key in self.nobalancer_config}, retain_graph=True)
+        self.balancer.backward({key: all_losses[key] for key in self.balancer_config}, info['x_hat'])
