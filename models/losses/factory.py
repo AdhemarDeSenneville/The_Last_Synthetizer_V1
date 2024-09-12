@@ -1,15 +1,29 @@
 # file name inspired by Stability AI
+# A bit complicated, but modularity will be useful for my future projects
 
-
-from balancer import Balancer
-from losses import L1TemporalLoss, L2TemporalLoss, AuralossLoss, NoBalancer
+from balancer import Balancer, NoBalancer
+from losses import L1TemporalLoss, L2TemporalLoss, AuralossLoss
 from discriminator import Discriminator
 
+
 cfg = {
-    'balancer': True,
-    'L1TemporalLoss':{'weight':1},
-    'L2TemporalLoss':{'weight':1},
-    'AuralossLoss':{'weight':1,
+    'L1TemporalLoss':{
+        'weight':1,
+        'balancer': True,
+        'key_output': 'x_hat',
+        'key_target': 'x',
+        },
+    'L2TemporalLoss':{
+        'weight':1,
+        'balancer': True,
+        'key_output': 'x_hat',
+        'key_target': 'x',
+        },
+    'AuralossLoss':{
+        'weight':1,
+        'balancer': True,
+        'key_output': 'x_hat',
+        'key_target': 'x',
         "fft_sizes": [32, 128, 512, 2048],  # [32, 128, 512, 2048, 8192, 32768]
         "hop_sizes": [16, 64, 256, 1024],  # [16, 64, 256, 1024, 4096, 16384]
         "win_lengths": [32, 128, 512, 2048],  # [32, 128, 512, 2048, 8192, 32768]
@@ -18,13 +32,20 @@ cfg = {
         "w_lin_mag": 1.0,
         "w_log_mag": 1.0,
     },
+    'KLDivergenceLoss':{
+        'weight':1,
+        'balancer': False,
+        'key_mean': 'z_mean',
+        'key_log_std': 'z_log_std',
+        },
     'Discriminator':{
         'weight':1,
+        'balancer': True,
         'type':'Spectrogram_VGGStyle',
     },
     'FeatureLoss':{
         'weight':1,
-        
+        'balancer': True,
     },
     }
 
@@ -33,32 +54,49 @@ from torch import nn
 
 class CraftLosses:
 
-    def __init__(self, losses_config):
-
-        is_balancer = losses_config.pop('balancer')
+    def __init__(self, **losses_config):
 
         self.balancer_config = {}
+        self.nobalancer_config = {}
         self.losses = []
 
+        # Discriminator loss
+        discriminator_config = losses_config.pop('Discriminator')
+        weight = discriminator_config.pop('weight')
+        is_balancer = discriminator_config.pop('balancer')
+        self.discriminator = Discriminator(**discriminator_config)
+        if is_balancer: self.balancer_config['discriminator_loss'] = weight
+        else: self.nobalancer_config['discriminator_loss'] = weight
+
+        # Feature loss
+        feature_loss_config = losses_config.pop('FeatureLoss')
+        if is_balancer: self.balancer_config['feature_loss'] = feature_loss_config['weight']
+        else: self.nobalancer_config['feature_loss'] = feature_loss_config['weight']
+        
+        # Other losses
         for loss_name, loss_config in losses_config.items():
+
             weight = loss_config.pop('weight')
+            is_balancer = losses_config.pop('balancer')
+
             loss = globals()[loss_name](*loss_config)
 
             self.losses.append(loss)
-            self.balancer_config[loss.name] = weight
 
-        if is_balancer:
-            self.balancer = Balancer(self.balancer_config)  # Initialize balancer if specified
-        else:
-            self.balancer = NoBalancer(self.balancer_config)
+            if is_balancer:
+                self.balancer_config[loss.name] = weight
+            else:
+                self.nobalancer_config[loss.name] = weight
 
-    def forward(self, info):
-        total_loss = 0.0
+        self.balancer = Balancer(self.balancer_config)
+        self.nobalancer = NoBalancer(self.nobalancer_config)
 
-        all_losses = {}
+    def backward(self, info):
+
+        all_losses = self.discriminator.loss(self, info['x'], info['x_hat'])
+
         for loss in self.losses:
             all_losses[loss.name] = loss(info)
 
-        total_loss = self.balancer(all_losses)
-
-        return total_loss
+        self.balancer.backward(all_losses[self.balancer_config.keys()], info['x_hat'])
+        self.nobalancer.backward((all_losses[self.nobalancer_config.keys()]))

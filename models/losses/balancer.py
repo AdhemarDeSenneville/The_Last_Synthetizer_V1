@@ -11,6 +11,20 @@ import torch
 from torch import autograd
 
 
+class NoBalancer:
+    def __init__(self, weights: tp.Dict[str, float]):
+        self.weights = weights
+
+    def backward(self, losses: tp.Dict[str, torch.Tensor], input: torch.Tensor):
+
+        total_loss = 0.0
+
+        for name, value in losses.items():
+            total_loss += value * self.weights[name]
+        
+        total_loss.backward()
+
+
 class Balancer:
     """Loss balancer.
 

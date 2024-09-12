@@ -11,7 +11,7 @@ from auraloss import MultiResolutionSTFTLoss
 TensorDict = tp.Dict[str, torch.Tensor]
 
 class LossModule(nn.Module):
-    def __init__(self, name: str, weight: float = 1.0):
+    def __init__(self, name: str):
         super().__init__()
 
         self.name = name
@@ -21,8 +21,8 @@ class LossModule(nn.Module):
 
 
 class L1TemporalLoss(LossModule):
-    def __init__(self, key_output: str, key_target: str, name: str = 'l1_loss'):
-        super().__init__(name=name)
+    def __init__(self, key_output: str, key_target: str):
+        super().__init__(name='l1_loss')
 
         self.key_output = key_output
         self.key_target = key_target
@@ -34,8 +34,8 @@ class L1TemporalLoss(LossModule):
     
 
 class L2TemporalLoss(LossModule):
-    def __init__(self, key_output: str, key_target: str, name: str = 'L2_loss'):
-        super().__init__(name=name)
+    def __init__(self, key_output: str, key_target: str):
+        super().__init__(name='l2_loss')
 
         self.key_output = key_output
         self.key_target = key_target
@@ -47,8 +47,8 @@ class L2TemporalLoss(LossModule):
 
 
 class AuralossLoss(LossModule):
-    def __init__(self, *config, key_output: str, key_target: str, name: str):
-        super().__init__(name)
+    def __init__(self, *config, key_output: str, key_target: str):
+        super().__init__(name = 'aura')
 
         self.key_output = key_output
         self.key_target = key_target
@@ -59,28 +59,9 @@ class AuralossLoss(LossModule):
         return loss
 
 
-class MultiLoss(nn.Module):
-    def __init__(self, losses: tp.List[LossModule]):
-        super().__init__()
-
-        self.losses = nn.ModuleList(losses)
-
-    def forward(self, info):
-        total_loss = 0
-
-        losses = {}
-
-        for loss_module in self.losses:
-            module_loss = loss_module(info)
-            total_loss += module_loss
-            losses[loss_module.name] = module_loss
-
-        return total_loss, losses
-
-
 class KLDivergenceLoss(LossModule):
-    def __init__(self, key_mean: str, key_log_std: str, name: str = 'kl_divergence_loss'):
-        super().__init__(name=name)
+    def __init__(self, key_mean: str, key_log_std: str):
+        super().__init__(name='kl_divergence_loss')
 
         self.key_mean = key_mean
         self.key_log_std = key_log_std
@@ -97,15 +78,3 @@ class KLDivergenceLoss(LossModule):
         return kl_loss
 
 
-class NoBalancer:
-    def __init__(self, weights: tp.Dict[str, float]):
-        self.weights = weights
-
-    def backward(self, losses: tp.Dict[str, torch.Tensor], input: torch.Tensor):
-
-        total_loss = 0.0
-
-        for name, value in losses.items():
-            total_loss += value * self.weights[name]
-        
-        return total_loss
