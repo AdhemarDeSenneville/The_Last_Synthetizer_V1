@@ -10,7 +10,7 @@ import flashy
 import torch
 from torch import autograd
 
-
+# Adding a 'no' balancer (for KL loss ect.)
 class NoBalancer:
     def __init__(self, weights: tp.Dict[str, float]):
         self.weights = weights

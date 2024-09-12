@@ -1,3 +1,6 @@
+# Code from Adhémar de Senneville
+# Close to Encodec with 1 frequency resolution
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F

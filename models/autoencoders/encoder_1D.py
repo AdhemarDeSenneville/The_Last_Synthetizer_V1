@@ -1,3 +1,7 @@
+# Code from Adhémar de Senneville
+
+
+
 from math import floor
 from typing import Any, Dict, List, Optional, Sequence, Tuple, Union
 
@@ -75,23 +79,24 @@ def Upsample1d(in_channels: int, out_channels: int, factor: int) -> nn.Module:
 
 class ConvBlock1d(nn.Module):
     def __init__(
-        self,
-        in_channels: int,
-        out_channels: int,
-        *,
-        kernel_size: int = 3,
-        stride: int = 1,
-        padding: int = 1,
-        dilation: int = 1,
-        num_groups: int = 1,
-        use_norm: bool = True,
-        activation: tp.Type[nn.Module] = nn.ReLU,
-    ) -> None:
+            self,
+            in_channels: int,
+            out_channels: int,
+            *,
+            kernel_size: int = 3,
+            stride: int = 1,
+            padding: int = 1,
+            dilation: int = 1,
+            num_groups: int = 4,
+            use_norm: bool = True,
+            activation: tp.Type[nn.Module] = nn.ReLU,
+        ) -> None:
         super().__init__()
 
+        #assert in_channels % num_groups == 0, f"num_channels ({in_channels}) must be divisible by num_groups ({num_groups})"
         self.groupnorm = (
-            nn.GroupNorm(num_groups=num_groups, num_channels=in_channels) # WARNING
-            if use_norm
+            nn.GroupNorm(num_groups=num_groups, num_channels=in_channels)
+            if use_norm and in_channels % num_groups == 0
             else nn.Identity()
         )
         self.activation = activation()
@@ -120,6 +125,7 @@ class ResnetBlock1d(nn.Module):
         padding: int = 1,
         dilation: int = 1,
         use_norm: bool = True,
+        num_groups: int = 4,
         activation: tp.Type[nn.Module] = nn.ReLU,
     ) -> None:
         super().__init__()
@@ -132,6 +138,7 @@ class ResnetBlock1d(nn.Module):
             padding=padding,
             dilation=dilation,
             use_norm=use_norm,
+            num_groups=num_groups,
             activation=activation,
         )
 
@@ -139,6 +146,7 @@ class ResnetBlock1d(nn.Module):
             in_channels=out_channels,
             out_channels=out_channels,
             use_norm=use_norm,
+            num_groups=num_groups,
             activation=activation,
         )
 
@@ -163,6 +171,7 @@ class Encoder1d(nn.Module):
         res_blocks: int = 2,
         activation: tp.Type[nn.Module] = nn.ReLU,
         use_norm: bool = True,
+        num_groups: int = 4,
         variational: bool = True,
         lstm: bool = True,
     ) -> None:
@@ -181,6 +190,7 @@ class Encoder1d(nn.Module):
                         in_channels=last_channels,
                         out_channels=channels[i],
                         use_norm=use_norm,
+                        num_groups=num_groups,
                         activation=activation,
                     )
                 )
@@ -243,6 +253,7 @@ class Decoder1d(nn.Module):
         res_blocks: int = 2,
         activation: tp.Type[nn.Module] = nn.ReLU,
         use_norm: bool = True,
+        num_groups: int = 4,
         variational: bool = True,
         lstm: bool = True,
     ) -> None:
@@ -275,6 +286,7 @@ class Decoder1d(nn.Module):
                         in_channels=channels[i],
                         out_channels=output_channels,
                         use_norm=use_norm,
+                        num_groups=num_groups,
                         activation=activation,
                     )
                 )
@@ -345,13 +357,14 @@ class Autoencoder1d(nn.Module):
 if __name__ == '__main__':
     
     config = {
-        'in_channels': 2,
+        'in_channels': 1,
         'out_channels': 16,
         'channels': [16, 32, 64, 64],
         'factors': [4, 4, 4, 4],
         'res_blocks': 2,
-        'activation': nn.ReLU,
+        'activation': nn.SiLU,
         'use_norm': True,
+        'num_groups': 4,
         'variational': True,
         'lstm': True,
     }
@@ -361,7 +374,7 @@ if __name__ == '__main__':
     test_autoencoder_model = Autoencoder1d(**config)
 
     # Example input
-    input_tensor = torch.randn(7, 2, 1025)
+    input_tensor = torch.randn(7, 1, 1025)
 
     # Test encoder
     z_tensor = test_encoder_model(input_tensor)

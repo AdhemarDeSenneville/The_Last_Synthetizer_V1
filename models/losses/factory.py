@@ -1,3 +1,4 @@
+# Code from Adhémar de Senneville
 # file name inspired by Stability AI
 # A bit complicated, but modularity will be useful for my future projects
 
@@ -6,7 +7,7 @@ from losses import L1TemporalLoss, L2TemporalLoss, AuralossLoss, KLDivergenceLos
 from discriminator import Discriminator
 
 
-cfg = {
+example_cfg = {
     'L1TemporalLoss':{
         'weight':1,
         'balancer': True,
