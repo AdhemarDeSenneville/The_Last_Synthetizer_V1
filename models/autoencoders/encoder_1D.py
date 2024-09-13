@@ -1,118 +1,19 @@
 # Code from Adhémar de Senneville
-
-
-
-from math import floor
-from typing import Any, Dict, List, Optional, Sequence, Tuple, Union
+# Fully conv Auto-encoder
 
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-#from einops import pack, rearrange, reduce, unpack
-#from einops_exts import rearrange_many
 from torch import Tensor
-from torchaudio import transforms
 
 import typing as tp
+from typing import List
 from math import prod
 from torch import nn
 
-# Simplified LSTM Module
-class LSTM(nn.Module):
-    def __init__(self, dimension: int, num_layers: int = 2, skip: bool = True, bidirectional: bool = True):
-        super().__init__()
-        self.skip = skip
-        self.bidirectional = bidirectional
-        self.dimention = dimension
-
-        self.lstm = nn.LSTM(dimension, dimension, num_layers, bidirectional = bidirectional)
-
-    def forward(self, x):
-        x = x.permute(2, 0, 1)
-        y, _ = self.lstm(x)
-
-        if self.bidirectional:
-            y = y[...,-self.dimention:]
-
-        if self.skip:
-            y = y + x
-
-        y = y.permute(1, 2, 0)
-        return y
-
-# Simplified conv Modules
-def Conv1d(*args, **kwargs) -> nn.Module:
-    return nn.Conv1d(*args, **kwargs)
-
-
-def ConvTranspose1d(*args, **kwargs) -> nn.Module:
-    return nn.ConvTranspose1d(*args, **kwargs)
-
-
-def Downsample1d(
-    in_channels: int, out_channels: int, factor: int, kernel_multiplier: int = 2
-) -> nn.Module:
-    assert kernel_multiplier % 2 == 0, "Kernel multiplier must be even"
-
-    return Conv1d(
-        in_channels=in_channels,
-        out_channels=out_channels,
-        kernel_size=factor * kernel_multiplier + 1,
-        stride=factor,
-        padding=factor * (kernel_multiplier // 2),
-    )
-
-
-def Upsample1d(in_channels: int, out_channels: int, factor: int) -> nn.Module:
-    if factor == 1:
-        return Conv1d(
-            in_channels=in_channels, out_channels=out_channels, kernel_size=3, padding=1
-        )
-    return ConvTranspose1d(
-        in_channels=in_channels,
-        out_channels=out_channels,
-        kernel_size=factor * 2,
-        stride=factor,
-        padding=factor // 2 + factor % 2,
-        output_padding=factor % 2,
-    )
-
-class ConvBlock1d(nn.Module):
-    def __init__(
-            self,
-            in_channels: int,
-            out_channels: int,
-            *,
-            kernel_size: int = 3,
-            stride: int = 1,
-            padding: int = 1,
-            dilation: int = 1,
-            num_groups: int = 4,
-            use_norm: bool = True,
-            activation: tp.Type[nn.Module] = nn.ReLU,
-        ) -> None:
-        super().__init__()
-
-        #assert in_channels % num_groups == 0, f"num_channels ({in_channels}) must be divisible by num_groups ({num_groups})"
-        self.groupnorm = (
-            nn.GroupNorm(num_groups=num_groups, num_channels=in_channels)
-            if use_norm and in_channels % num_groups == 0
-            else nn.Identity()
-        )
-        self.activation = activation()
-        self.project = Conv1d(
-            in_channels=in_channels,
-            out_channels=out_channels,
-            kernel_size=kernel_size,
-            stride=stride,
-            padding=padding,
-            dilation=dilation,
-        )
-
-    def forward(self, x: Tensor) -> Tensor:
-        x = self.groupnorm(x)
-        x = self.activation(x)
-        return self.project(x)
+from ..modules.lstm import LSTM
+from ..modules.conv import ConvBlock1d, Conv1d, Upsample1d, Downsample1d
+from .utils import pre_process, post_process
 
 class ResnetBlock1d(nn.Module):
     def __init__(
@@ -322,32 +223,14 @@ class Autoencoder1d(nn.Module):
         self.decoder = Decoder1d(**nn_cfg)
 
         self.eff_padding = int(prod(nn_cfg['factors']))
-    
-    def pre_process(self, x):
-        """
-        Zero-pad the temporal dimension (dimension 2) to make its length a multiple of eff_padding.
-        """
-        original_length = x.shape[2]
-        pad_length = (self.eff_padding - (original_length % self.eff_padding)) % self.eff_padding
-
-        if pad_length > 0:
-            x = F.pad(x, (0, pad_length))
-
-        return x, original_length
-
-    def post_process(self, x, original_length):
-        """
-        Remove any excess padding in the temporal dimension to restore the original length.
-        """
-        return x[:, :, :original_length]
 
     def forward(self, x):
-        x, x_length = self.pre_process(x)
+        x, x_length = pre_process(x, self.eff_padding)
 
         encoder_output = self.encoder(x)
         decoder_output = self.decoder(encoder_output['z'])
 
-        decoder_output['x_hat'] = self.post_process(decoder_output['x_hat'],x_length)
+        decoder_output['x_hat'] = post_process(decoder_output['x_hat'],x_length)
 
         return {
             **encoder_output,
@@ -378,12 +261,12 @@ if __name__ == '__main__':
 
     # Test encoder
     z_tensor = test_encoder_model(input_tensor)
-    print(z_tensor['z'].shape) 
+    print("z     shape",z_tensor['z'].shape)
 
     # Test decoder
     x_tensor = test_decoder_model(z_tensor['z'])
-    print(x_tensor['x_hat'].shape) 
+    print("x_hat shape",x_tensor['x_hat'].shape)
 
     # Test auto-encoder
     x_tensor = test_autoencoder_model(input_tensor)
-    print(x_tensor['x_hat'].shape) 
+    print("x_hat shape",x_tensor['x_hat'].shape)
