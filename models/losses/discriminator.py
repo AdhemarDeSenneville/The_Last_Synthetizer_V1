@@ -63,9 +63,9 @@ class Discriminator(nn.Module):
 
     def forward(self, x):
         
-        # Apply STFT, which converts (B, 2, T) -> (B, 2, F, T')
+        # Apply STFT, which converts (B, 1, T) -> (B, 2, F, T')
         x = self.stft(x)
-        x = torch.stack([x[:,0,...].real, x[:,0,...].imag, x[:,1,...].real, x[:,1,...].imag], dim=1)
+        x = torch.stack([x[:,0,...].real, x[:,0,...].imag], dim=1)
         
 
         features = {}

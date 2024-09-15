@@ -92,7 +92,7 @@ class CraftLosses:
         self.balancer = Balancer(self.balancer_config)
         self.nobalancer = NoBalancer(self.nobalancer_config)
 
-    def backward(self, info):
+    def backward(self, info, logging = True):
 
         all_losses = self.discriminator.loss(info['x'], info['x_hat'])
 
@@ -103,3 +103,6 @@ class CraftLosses:
         
         self.nobalancer.backward({key: all_losses[key] for key in self.nobalancer_config}, retain_graph=True)
         self.balancer.backward({key: all_losses[key] for key in self.balancer_config}, info['x_hat'])
+
+        if logging:
+            return all_losses
