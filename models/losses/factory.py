@@ -2,9 +2,9 @@
 # file name inspired by Stability AI
 # A bit complicated, but modularity will be useful for my future projects
 
-from balancer import Balancer, NoBalancer
-from losses import L1TemporalLoss, L2TemporalLoss, AuralossLoss, KLDivergenceLoss
-from discriminator import Discriminator
+from .balancer import Balancer, NoBalancer
+from .losses import L1TemporalLoss, L2TemporalLoss, AuralossLoss, KLDivergenceLoss
+from .discriminator import Discriminator
 
 
 example_cfg = {

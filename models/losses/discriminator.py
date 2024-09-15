@@ -27,7 +27,7 @@ class Discriminator(nn.Module):
         # VGG-style discriminator layers
         self.blocks = nn.ModuleList([
             nn.Sequential(
-                nn.Conv2d(4, C, kernel_size=kernel_1, stride=1, padding=padding_1),
+                nn.Conv2d(2, C, kernel_size=kernel_1, stride=1, padding=padding_1),
                 nn.BatchNorm2d(C),
                 nn.LeakyReLU()
             ),
@@ -82,6 +82,7 @@ class Discriminator(nn.Module):
         return x
     
     def loss(self, x, x_hat):
+        # WARNING 
         
         # Generator and Dicriminator loss
         score_fake = self(x_hat)
@@ -94,10 +95,10 @@ class Discriminator(nn.Module):
         
         with torch.no_grad():
             x = self.stft(x)
-            x = torch.stack([x[:,0,...].real, x[:,0,...].imag, x[:,1,...].real, x[:,1,...].imag], dim=1)
+            x = torch.stack([x[:,0,...].real, x[:,0,...].imag], dim=1)
         
         x_hat = self.stft(x_hat)
-        x_hat = torch.stack([x_hat[:,0,...].real, x_hat[:,0,...].imag, x_hat[:,1,...].real, x_hat[:,1,...].imag], dim=1)
+        x_hat = torch.stack([x_hat[:,0,...].real, x_hat[:,0,...].imag], dim=1)
         
         for block in self.blocks:
             with torch.no_grad():
@@ -117,8 +118,8 @@ class Discriminator(nn.Module):
 if __name__ == "__main__":
     # Test input: batch of audio signals with shape (B, 2, T)
     B, T = 4, 44000  # Batch size 4, 16000 samples (1 second at 16 kHz)
-    test_input = torch.randn(B, 2, T)  # Random tensor simulating audio input
-    test_hattt = torch.randn(B, 2, T)  # Random tensor simulating audio input
+    test_input = torch.randn(B, 1, T)  # Random tensor simulating audio input
+    test_hattt = torch.randn(B, 1, T)  # Random tensor simulating audio input
 
     model = Discriminator()  # Initialize the model
 

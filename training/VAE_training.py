@@ -32,8 +32,8 @@ import wandb
 from pytorch_lightning.loggers import WandbLogger
 #import seaborn as sns
 
-from ..models.autoencoders.encoder_1D import Autoencoder1d
-from ..models.losses.factory import CraftLosses
+from models.autoencoders.encoder_1D import Autoencoder1d
+from models.losses.factory import CraftLosses
 
 class LitAutoEncoder(pl.LightningModule):
     def __init__(
@@ -46,10 +46,7 @@ class LitAutoEncoder(pl.LightningModule):
         self.save_hyperparameters() # for wandb
         
         # Model init
-        if model_cfg['type'] == 'Autoencoder1d':
-            self.model = Autoencoder1d(**model_cfg)
-        else:
-            raise NotImplementedError
+        self.model = Autoencoder1d(**model_cfg)
         
         # Training init
         self.optimizer_cfg = optimizer_cfg
@@ -67,7 +64,9 @@ class LitAutoEncoder(pl.LightningModule):
     def count_parameters(self):
         return sum(p.numel() for p in self.parameters() if p.requires_grad)
     
-    def training_step(self, x, batch_idx):
+    def training_step(self, batch, batch_idx):
+
+        x = batch['x']
         
         # Log the original audio
         if self.first_audio_sample is None: 
@@ -76,17 +75,34 @@ class LitAutoEncoder(pl.LightningModule):
         # Compute loss
         info = self.forward(x)
         log_dict = self.loss.backward(info)
-        
+
+        # Get the optimizers
+        optimiser_ae, optimiser_discriminator = self.optimizers()
+
+        # Perform the step for the autoencoder optimizer
+        optimiser_ae.step()
+        optimiser_ae.zero_grad()
+
+        # Update the discriminator every 2 steps
+        if batch_idx % self.UPDATE_FREQUENCY_DISCRIMINATOR == 0:
+            optimiser_discriminator.step()
+            optimiser_discriminator.zero_grad()
+
         # Log
         self.log_dict(log_dict) #, on_step=True, on_epoch=True
         return log_dict
     
-    def predict_step(self, x, batch_idx):
-        x_hat = self.forward(x)
-        return x_hat
+    def predict_step(self, batch, batch_idx):
+        info = self.forward(batch['x'])
+        return info
 
     def configure_optimizers(self):
-        return torch.optim.Adam(self.parameters(), **self.optimizer_cfg)
+        self.automatic_optimization = False  # Use manual optimization
+        self.UPDATE_FREQUENCY_DISCRIMINATOR = 2
+        # Define two optimizers
+        optimiser_ae = torch.optim.Adam(self.parameters(), **self.optimizer_cfg)
+        optimiser_discriminator = torch.optim.Adam(self.loss.discriminator.parameters(), **self.optimizer_cfg)
+        return [optimiser_ae, optimiser_discriminator]
     
     def on_train_epoch_end(self):        
         #print('here')

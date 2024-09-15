@@ -113,9 +113,9 @@ class AudioDataset(torch.utils.data.Dataset):
 
         # Return a dictionary with the waveform, envelope, and pitch
         return {
-            'x': waveform,
-            'x_envelope': torch.tensor(x_envelope),
-            'x_pitch': torch.tensor(x_pitch)
+            'x': waveform.unsqueeze(0),
+            'x_envelope': torch.tensor(x_envelope).unsqueeze(0),
+            'x_pitch': torch.tensor(x_pitch).unsqueeze(0)
         }
     
     def plot_item(self, i):
@@ -123,9 +123,9 @@ class AudioDataset(torch.utils.data.Dataset):
         item = self[i]
         
         # Extract waveform, envelope, and pitch
-        waveform = item['x'].numpy()
-        envelope = item['x_envelope'].numpy()
-        pitch = item['x_pitch'].numpy()
+        waveform = item['x'].numpy()[0]
+        envelope = item['x_envelope'].numpy()[0]
+        pitch = item['x_pitch'].numpy()[0]
         t = np.linspace(0, len(waveform) / self.sr, len(waveform))
         
         fig, axs = plt.subplots(2, 1, figsize=(10, 6))

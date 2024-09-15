@@ -1,6 +1,6 @@
 
-from .VAE_training import LitAutoEncoder
-from ..data.data import AudioDataset
+from training.VAE_training import LitAutoEncoder
+from data.data import AudioDataset
 from pytorch_lightning import Trainer
 from torch.utils.data import random_split, DataLoader, TensorDataset, Dataset
 from pytorch_lightning.callbacks import *

@@ -5,7 +5,7 @@ import typing as tp
 
 import torch
 from torch import nn
-from auraloss import MultiResolutionSTFTLoss
+from .auraloss import MultiResolutionSTFTLoss
 
 
 TensorDict = tp.Dict[str, torch.Tensor]
