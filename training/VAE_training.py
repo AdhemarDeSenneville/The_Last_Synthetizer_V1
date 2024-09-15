@@ -100,7 +100,7 @@ class LitAutoEncoder(pl.LightningModule):
         self.automatic_optimization = False  # Use manual optimization
         self.UPDATE_FREQUENCY_DISCRIMINATOR = 2
         # Define two optimizers
-        optimiser_ae = torch.optim.Adam(self.parameters(), **self.optimizer_cfg)
+        optimiser_ae = torch.optim.Adam(self.model.parameters(), **self.optimizer_cfg)
         optimiser_discriminator = torch.optim.Adam(self.loss.discriminator.parameters(), **self.optimizer_cfg)
         return [optimiser_ae, optimiser_discriminator]
     

@@ -53,7 +53,7 @@ example_cfg = {
 from torch import nn
 
 
-class CraftLosses:
+class CraftLosses(nn.Module):
 
     def __init__(self, **losses_config):
 
