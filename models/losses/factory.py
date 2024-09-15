@@ -56,6 +56,7 @@ from torch import nn
 class CraftLosses(nn.Module):
 
     def __init__(self, **losses_config):
+        super().__init__()
 
         self.balancer_config = {}
         self.nobalancer_config = {}
