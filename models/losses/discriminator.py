@@ -62,6 +62,8 @@ class Discriminator(nn.Module):
         self.final_conv = nn.Conv1d(501, 1, kernel_size=3)
 
     def forward(self, x):
+
+        self.stft = self.stft.to(x.device)
         
         # Apply STFT, which converts (B, 1, T) -> (B, 2, F, T')
         x = self.stft(x)
