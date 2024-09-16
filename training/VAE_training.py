@@ -75,21 +75,24 @@ class LitAutoEncoder(pl.LightningModule):
         # Compute loss
         info = self.forward(x)
 
-        # Grad Update
-        optimiser_ae, optimiser_discriminator = self.optimizers()
-        
-        log_dict = self.loss.backward(info)
-        optimiser_ae.step()
-        optimiser_ae.zero_grad()
+        loss = F.l1_loss(info['x'],info['x_hat'])
+        log_dict = {'global_loss': loss}
 
-        if batch_idx % self.update_freq_discriminator == 0:
-            log_dict['discriminator_loss'] = self.loss.backward_discriminator(info)
-            optimiser_discriminator.step()
-            optimiser_discriminator.zero_grad()
+        ## Grad Update
+        #optimiser_ae, optimiser_discriminator = self.optimizers()
+        
+        #log_dict = self.loss.backward(info)
+        #optimiser_ae.step()
+        #optimiser_ae.zero_grad()
+
+        #if batch_idx % self.update_freq_discriminator == 0:
+        #    log_dict['discriminator_loss'] = self.loss.backward_discriminator(info)
+        #    optimiser_discriminator.step()
+        #    optimiser_discriminator.zero_grad()
 
         # Log
         self.log_dict(log_dict) #, on_step=True, on_epoch=True
-        return log_dict
+        return loss
     
     def predict_step(self, batch, batch_idx):
         info = self.forward(batch['x'])
