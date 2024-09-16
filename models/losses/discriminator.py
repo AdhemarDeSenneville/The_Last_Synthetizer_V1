@@ -73,13 +73,13 @@ class Discriminator(nn.Module):
         features = {}
         for l, block in enumerate(self.blocks):
             x = block(x)
-            print(l, x.shape)
+            #print(l, x.shape)
             features[l] = x
 
         x = self.reduct_conv(x).squeeze(1)
-        print(x.shape)
+        #print(x.shape)
         x = self.final_conv(x).squeeze(1)
-        print(x.shape)
+        #print(x.shape)
 
         return x
     
