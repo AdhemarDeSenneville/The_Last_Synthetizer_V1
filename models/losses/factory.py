@@ -72,9 +72,6 @@ class CraftLosses(nn.Module):
         if is_balancer: self.balancer_config['generator_loss'] = weight
         else: self.nobalancer_config['generator_loss'] = weight
 
-        # Discriminator loss
-        self.nobalancer_config['discriminator_loss'] = 1
-
         # Feature loss
         feature_loss_config = losses_config.pop('FeatureLoss')
         if is_balancer: self.balancer_config['feature_loss'] = feature_loss_config['weight']
