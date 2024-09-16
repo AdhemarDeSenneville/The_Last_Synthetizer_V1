@@ -78,6 +78,10 @@ class LitAutoEncoder(pl.LightningModule):
         loss = F.l1_loss(info['x'],info['x_hat'])
         log_dict = {'global_loss': loss}
 
+        # Log the average gradient of parameters
+        avg_gradients = torch.mean(torch.stack([torch.mean(p.grad) for p in self.parameters() if p.grad is not None]))
+        log_dict['avg_gradient'] = avg_gradients
+
         ## Grad Update
         #optimiser_ae, optimiser_discriminator = self.optimizers()
         
