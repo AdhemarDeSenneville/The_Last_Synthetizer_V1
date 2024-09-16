@@ -119,6 +119,4 @@ class CraftLosses(nn.Module):
         discriminator_loss.backward()
 
         if logging:
-            return {
-                'discriminator_loss': discriminator_loss
-            }
+            return discriminator_loss
