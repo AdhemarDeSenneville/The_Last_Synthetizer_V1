@@ -76,6 +76,7 @@ class LitAutoEncoder(pl.LightningModule):
         info = self.forward(x)
 
         loss = F.l1_loss(info['x'],info['x_hat'])
+        loss.backward()
         log_dict = {'global_loss': loss}
 
         # Log the average gradient of parameters
