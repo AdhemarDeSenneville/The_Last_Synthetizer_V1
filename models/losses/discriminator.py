@@ -90,24 +90,31 @@ class Discriminator(nn.Module):
         score_fake = self(x_hat)
         score_real = self(x)
 
-        generator_loss = -score_fake.mean()
-        discriminator_loss = torch.relu(1 - score_real).mean() + torch.relu(1 + score_fake).mean()
-
         featur_loss = 0.0
         
-        with torch.no_grad():
-            x = self.stft(x)
-            x = torch.stack([x[:,0,...].real, x[:,0,...].imag], dim=1)
+        
+        x = self.stft(x)
+        x = torch.stack([x[:,0,...].real, x[:,0,...].imag], dim=1)
         
         x_hat = self.stft(x_hat)
         x_hat = torch.stack([x_hat[:,0,...].real, x_hat[:,0,...].imag], dim=1)
         
         for block in self.blocks:
-            with torch.no_grad():
-                x = block(x)
+            x = block(x)
             x_hat = block(x_hat)
 
             featur_loss += F.l1_loss(x, x_hat)/torch.norm(x,1)
+        
+
+        x = self.reduct_conv(x).squeeze(1)
+        x_hat = self.reduct_conv(x_hat).squeeze(1)
+
+        score_real = self.final_conv(x).squeeze(1)
+        score_fake = self.final_conv(x_hat).squeeze(1)
+
+
+        generator_loss = -score_fake.mean()
+        discriminator_loss = torch.relu(1 - score_real).mean() + torch.relu(1 + score_fake).mean()
         
         return {
             'feature_loss': featur_loss,
@@ -133,3 +140,5 @@ if __name__ == "__main__":
 
     # Print the output shape
     print("Output shape:", output.shape)
+    
+    print("Number of trainable parameters:", sum(p.numel() for p in model.parameters() if p.requires_grad))
