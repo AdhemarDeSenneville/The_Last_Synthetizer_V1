@@ -106,11 +106,11 @@ class LitAutoEncoder(pl.LightningModule):
     def on_train_epoch_end(self):        
         #print('here')
         
-        if (self.first_audio_sample is not None) and (self.current_epoch % 10 == 1) and hasattr(self.logger.experiment, 'log'):
+        if (self.first_audio_sample is not None) and (self.current_epoch % 1 == 0) and hasattr(self.logger.experiment, 'log'):
             
             # Get the first audio sample
             #print(self.first_audio_sample.device)
-            original_audio = self.first_audio_sample[0].cpu().numpy()
+            original_audio = self.first_audio_sample[0][0].cpu().numpy()
             reconstructed_audio = self.forward(self.first_audio_sample)['x_hat'][0][0].cpu().detach().numpy()
             
             # Ensure the audio data is in the correct range and format
@@ -128,19 +128,19 @@ class LitAutoEncoder(pl.LightningModule):
             # Log Audios
             if self.current_epoch==1:
                 self.logger.experiment.log({
-                    "original_audio": wandb.Audio(original_audio[0], sample_rate=self.sr, caption="Original Audio"),
+                    "original_audio": wandb.Audio(original_audio, sample_rate=self.sr, caption="Original Audio"),
                     "epoch": self.current_epoch
                 })
             self.logger.experiment.log({
-                "reconstructed_audio": wandb.Audio(reconstructed_audio[0], sample_rate=self.sr, caption="Reconstructed Audio"),
+                "reconstructed_audio": wandb.Audio(reconstructed_audio, sample_rate=self.sr, caption="Reconstructed Audio"),
                 "epoch": self.current_epoch
             })
             
             ori_path = 'fig/original_spectrogram.png'
             rec_path = 'fig/reconstructed_spectrogram.png'
             # Compute spectrograms to decibel (dB) units
-            original_spectrogram = librosa.stft(original_audio[0])
-            reconstructed_spectrogram = librosa.stft(reconstructed_audio[0])
+            original_spectrogram = librosa.stft(original_audio)
+            reconstructed_spectrogram = librosa.stft(reconstructed_audio)
             original_spectrogram_db = librosa.amplitude_to_db(np.abs(original_spectrogram), ref=np.max)
             reconstructed_spectrogram_db = librosa.amplitude_to_db(np.abs(reconstructed_spectrogram), ref=np.max)
 
