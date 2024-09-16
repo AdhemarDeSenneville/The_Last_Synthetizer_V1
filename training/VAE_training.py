@@ -136,38 +136,39 @@ class LitAutoEncoder(pl.LightningModule):
                 "epoch": self.current_epoch
             })
             
-            ori_path = 'fig/original_spectrogram.png'
-            rec_path = 'fig/reconstructed_spectrogram.png'
-            # Compute spectrograms to decibel (dB) units
-            original_spectrogram = librosa.stft(original_audio)
-            reconstructed_spectrogram = librosa.stft(reconstructed_audio)
-            original_spectrogram_db = librosa.amplitude_to_db(np.abs(original_spectrogram), ref=np.max)
-            reconstructed_spectrogram_db = librosa.amplitude_to_db(np.abs(reconstructed_spectrogram), ref=np.max)
+            if False:
+                ori_path = 'fig/original_spectrogram.png'
+                rec_path = 'fig/reconstructed_spectrogram.png'
+                # Compute spectrograms to decibel (dB) units
+                original_spectrogram = librosa.stft(original_audio)
+                reconstructed_spectrogram = librosa.stft(reconstructed_audio)
+                original_spectrogram_db = librosa.amplitude_to_db(np.abs(original_spectrogram), ref=np.max)
+                reconstructed_spectrogram_db = librosa.amplitude_to_db(np.abs(reconstructed_spectrogram), ref=np.max)
 
-            # Log Spectrograms
-            if self.current_epoch == 1:
+                # Log Spectrograms
+                if self.current_epoch == 1:
+                    plt.figure(figsize=(5, 5))
+                    librosa.display.specshow(original_spectrogram_db, sr=self.sr, x_axis='time', y_axis='log')
+                    plt.colorbar(format='%+2.0f dB')
+                    plt.title('Original Spectrogram')
+                    plt.tight_layout()
+                    plt.savefig(ori_path)
+                    plt.close()
+
+                    self.logger.experiment.log({
+                        "original_spectrogram": wandb.Image(ori_path),
+                        "epoch": self.current_epoch
+                    })
+                
                 plt.figure(figsize=(5, 5))
-                librosa.display.specshow(original_spectrogram_db, sr=self.sr, x_axis='time', y_axis='log')
+                librosa.display.specshow(reconstructed_spectrogram_db, sr=self.sr, x_axis='time', y_axis='log')
                 plt.colorbar(format='%+2.0f dB')
-                plt.title('Original Spectrogram')
+                plt.title('Reconstructed Spectrogram')
                 plt.tight_layout()
-                plt.savefig(ori_path)
+                plt.savefig(rec_path)
                 plt.close()
 
                 self.logger.experiment.log({
-                    "original_spectrogram": wandb.Image(ori_path),
+                    "reconstructed_spectrogram": wandb.Image(rec_path),
                     "epoch": self.current_epoch
                 })
-            
-            plt.figure(figsize=(5, 5))
-            librosa.display.specshow(reconstructed_spectrogram_db, sr=self.sr, x_axis='time', y_axis='log')
-            plt.colorbar(format='%+2.0f dB')
-            plt.title('Reconstructed Spectrogram')
-            plt.tight_layout()
-            plt.savefig(rec_path)
-            plt.close()
-
-            self.logger.experiment.log({
-                "reconstructed_spectrogram": wandb.Image(rec_path),
-                "epoch": self.current_epoch
-            })
