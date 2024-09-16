@@ -74,17 +74,16 @@ class LitAutoEncoder(pl.LightningModule):
         
         # Compute loss
         info = self.forward(x)
-        log_dict = self.loss.backward(info)
 
-        # Get the optimizers
+        # Grad Update
         optimiser_ae, optimiser_discriminator = self.optimizers()
-
-        # Perform the step for the autoencoder optimizer
+        
+        log_dict = self.loss.backward(info)
         optimiser_ae.step()
         optimiser_ae.zero_grad()
 
-        # Update the discriminator every 2 steps
-        if batch_idx % self.UPDATE_FREQUENCY_DISCRIMINATOR == 0:
+        if batch_idx % self.update_freq_discriminator == 0:
+            log_dict['discriminator_loss'] = self.loss.backward_discriminator(info)
             optimiser_discriminator.step()
             optimiser_discriminator.zero_grad()
 
@@ -98,7 +97,7 @@ class LitAutoEncoder(pl.LightningModule):
 
     def configure_optimizers(self):
         self.automatic_optimization = False  # Use manual optimization
-        self.UPDATE_FREQUENCY_DISCRIMINATOR = 2
+        self.update_freq_discriminator = 2
         # Define two optimizers
         optimiser_ae = torch.optim.Adam(self.model.parameters(), **self.optimizer_cfg)
         optimiser_discriminator = torch.optim.Adam(self.loss.discriminator.parameters(), **self.optimizer_cfg)

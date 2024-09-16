@@ -5,7 +5,7 @@
 from .balancer import Balancer, NoBalancer
 from .losses import L1TemporalLoss, L2TemporalLoss, AuralossLoss, KLDivergenceLoss
 from .discriminator import Discriminator
-
+import torch
 
 example_cfg = {
     'L1TemporalLoss':{
@@ -62,13 +62,18 @@ class CraftLosses(nn.Module):
         self.nobalancer_config = {}
         self.losses = []
 
-        # Discriminator loss
+        # Init discriminator network
         discriminator_config = losses_config.pop('Discriminator')
         weight = discriminator_config.pop('weight')
         is_balancer = discriminator_config.pop('balancer')
         self.discriminator = Discriminator(**discriminator_config)
-        if is_balancer: self.balancer_config['discriminator_loss'] = weight
-        else: self.nobalancer_config['discriminator_loss'] = weight
+
+        # Generator loss
+        if is_balancer: self.balancer_config['generator_loss'] = weight
+        else: self.nobalancer_config['generator_loss'] = weight
+
+        # Discriminator loss
+        self.nobalancer_config['discriminator_loss'] = 1
 
         # Feature loss
         feature_loss_config = losses_config.pop('FeatureLoss')
@@ -95,7 +100,7 @@ class CraftLosses(nn.Module):
 
     def backward(self, info, logging = True):
 
-        all_losses = self.discriminator.loss(info['x'], info['x_hat'])
+        all_losses = self.discriminator.generator_loss(info['x'], info['x_hat'])
 
         for loss in self.losses:
             all_losses[loss.name] = loss(info)
@@ -105,5 +110,18 @@ class CraftLosses(nn.Module):
         self.nobalancer.backward({key: all_losses[key] for key in self.nobalancer_config}, retain_graph=True)
         self.balancer.backward({key: all_losses[key] for key in self.balancer_config}, info['x_hat'])
 
+        with torch.no_grad():
+            all_losses['global_loss'] = sum(all_losses.values())
+
         if logging:
             return all_losses
+    
+    def backward_discriminator(self, info, logging = True):
+
+        discriminator_loss = self.discriminator.discriminator_loss(info['x'], info['x_hat'])
+        discriminator_loss.backward()
+
+        if logging:
+            return {
+                'discriminator_loss': discriminator_loss
+            }

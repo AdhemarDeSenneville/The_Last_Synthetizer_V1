@@ -82,44 +82,44 @@ class Discriminator(nn.Module):
         #print(x.shape)
 
         return x
-    
-    def loss(self, x, x_hat):
-        # WARNING 
-        
-        # Generator and Dicriminator loss
-        score_fake = self(x_hat)
+
+    def discriminator_loss(self, x, x_hat):
+
+        score_fake = self(x_hat.detach())
         score_real = self(x)
 
-        featur_loss = 0.0
+        discriminator_loss = torch.relu(1 - score_real).mean() + torch.relu(1 + score_fake).mean()
+
+        return discriminator_loss
+
+    
+    def generator_loss(self, x, x_hat):
+        # Generator loss
+
+        feature_loss = 0.0
         
-        
-        x = self.stft(x)
-        x = torch.stack([x[:,0,...].real, x[:,0,...].imag], dim=1)
+        with torch.no_grad():
+            x = self.stft(x)
+            x = torch.stack([x[:,0,...].real, x[:,0,...].imag], dim=1)
         
         x_hat = self.stft(x_hat)
         x_hat = torch.stack([x_hat[:,0,...].real, x_hat[:,0,...].imag], dim=1)
         
         for block in self.blocks:
-            x = block(x)
+            with torch.no_grad():
+                x = block(x)
             x_hat = block(x_hat)
 
-            featur_loss += F.l1_loss(x, x_hat)/torch.norm(x,1)
+            feature_loss += F.l1_loss(x, x_hat)/torch.norm(x,1)
         
-
-        x = self.reduct_conv(x).squeeze(1)
         x_hat = self.reduct_conv(x_hat).squeeze(1)
-
-        score_real = self.final_conv(x).squeeze(1)
         score_fake = self.final_conv(x_hat).squeeze(1)
-
-
+        
         generator_loss = -score_fake.mean()
-        discriminator_loss = torch.relu(1 - score_real).mean() + torch.relu(1 + score_fake).mean()
         
         return {
-            'feature_loss': featur_loss,
+            'feature_loss': feature_loss,
             'generator_loss': generator_loss,
-            'discriminator_loss': discriminator_loss + generator_loss, # TO SCALE GEN LOSS ACCORDINGLY IN THE BALANCER
         }
 
 
@@ -135,10 +135,11 @@ if __name__ == "__main__":
     # Perform inference
     output = model(test_input)
 
-    print(model.loss(test_input,test_hattt))
+    print(model.generator_loss(test_input,test_hattt))
+    print(model.discriminator_loss(test_input,test_hattt))
 
 
     # Print the output shape
     print("Output shape:", output.shape)
-    
+
     print("Number of trainable parameters:", sum(p.numel() for p in model.parameters() if p.requires_grad))
