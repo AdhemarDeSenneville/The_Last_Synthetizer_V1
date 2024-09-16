@@ -104,8 +104,11 @@ class CraftLosses(nn.Module):
 
         self.all_losses = all_losses
         
-        self.nobalancer.backward({key: all_losses[key] for key in self.nobalancer_config}, retain_graph=True)
-        self.balancer.backward({key: all_losses[key] for key in self.balancer_config}, info['x_hat'])
+        if len(self.nobalancer_config.keys()) != 0:
+            self.nobalancer.backward({key: all_losses[key] for key in self.nobalancer_config}, retain_graph=True)
+        
+        if len(self.balancer_config.keys()) != 0:
+            self.balancer.backward({key: all_losses[key] for key in self.balancer_config}, info['x_hat'])
 
         with torch.no_grad():
             all_losses['global_loss'] = sum(all_losses.values())
