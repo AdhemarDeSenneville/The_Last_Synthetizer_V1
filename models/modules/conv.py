@@ -4,7 +4,6 @@
 
 import torch.nn as nn
 from torch import Tensor
-import typing as tp
 
 from .activation import get_activation
 

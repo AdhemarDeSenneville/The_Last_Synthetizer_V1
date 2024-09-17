@@ -1,4 +1,17 @@
-# Code from Adhémar de Senneville
+
+"""
+Code from Adhémar de Senneville
+
+AudioDataset class
+
+Components:
+- AudioDataset: Main class that manages the loading, processing, and data retrieval.
+  - __init__: Initializes the dataset and its configurations.
+  - _get_envelope: Extracts the envelope of the audio signal using the specified detection method.
+  - _get_pitch: Extracts the pitch of the audio signal using librosa and interpolates the result.
+  - __getitem__: Returns a dictionary containing waveform, envelope, and pitch for a given index.
+  - plot_item: Visualizes the waveform, envelope, and pitch for a selected audio sample and plays the audio.
+"""
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -22,6 +35,7 @@ class AudioDataset(torch.utils.data.Dataset):
         self.sample_duration = config['sample_duration']
         self.latent_compression = config['latent_compression']
 
+        # Envelope Detector 
         self.envelope_detector_config = config['envelope_detector']
         self.envelope_detector_type = self.envelope_detector_config.pop('type')
         if self.envelope_detector_type == 'hilbert':
@@ -29,16 +43,14 @@ class AudioDataset(torch.utils.data.Dataset):
             self.envelope_detector_config['a'] = a
             self.envelope_detector_config['b'] = b
         
-
+        # Pitch Detector 
         self.pitch_detector_config = config['pitch_detector']
-
 
         self.wav_files = self._get_wav_files()
     
     def _get_wav_files(self):
         wav_files = []
 
-        # Traverse the directory tree
         for root, dirs, files in os.walk(self.data_path):
             
             for file in files:
@@ -47,7 +59,16 @@ class AudioDataset(torch.utils.data.Dataset):
         
         return wav_files
     
-    def _get_envelope(self, x):
+    def _get_envelope(self, x: np.ndarray) -> np.ndarray:
+        """
+        Computes the envelope of the audio signal using the specified envelope detection method.
+
+        Parameters:
+        x (np.ndarray): The input audio signal. Shape: (T,)
+
+        Returns:
+        np.ndarray: The computed envelope of the audio signal. Shape: (ceil(T/latent_compression),)
+        """
 
         pad_length = (self.latent_compression - (len(x) % self.latent_compression)) % self.latent_compression
         if pad_length > 0:
@@ -74,9 +95,18 @@ class AudioDataset(torch.utils.data.Dataset):
 
 
     
-    def _get_pitch(self, x):
+    def _get_pitch(self, x: np.ndarray) -> np.ndarray:
+        """
+        Computes the pitch of the audio signal by using the librosa piptrack method and interpolating the result.
+
+        Parameters:
+        x (np.ndarray): The input audio signal. Shape: (T,)
+
+        Returns:
+        np.ndarray: The computed pitch of the audio signal. Shape: (ceil(T/latent_compression),)
+        """
     
-        # Extract pitch and magnitude arrays
+        # Extract pitch from  magnitude
         pitches, _ = librosa.piptrack(y=x, sr=self.sr, **self.pitch_detector_config)
         x_pitch = np.max(pitches, axis=0)
         
@@ -91,7 +121,7 @@ class AudioDataset(torch.utils.data.Dataset):
     def __len__(self):
         return len(self.wav_files)
 
-    def __getitem__(self, idx):
+    def __getitem__(self, idx: int):
         wav_path = self.wav_files[idx]
         # waveform, sample_rate = torchaudio.load(wav_path) # Strange torch - numpy incompatibility
         waveform, sample_rate = sf.read(wav_path)
@@ -101,7 +131,7 @@ class AudioDataset(torch.utils.data.Dataset):
         if sample_rate != self.sr:
             waveform = torchaudio.transforms.Resample(orig_freq=sample_rate, new_freq=self.sr)(waveform)
 
-        # select a random part that has duration self.sample_duration
+        # Random part that has self.sample_duration
         num_samples = int(self.sample_duration * self.sr)
         start_idx = random.randint(0, waveform.size(0) - num_samples)
         waveform = waveform[start_idx:start_idx + num_samples]
@@ -111,31 +141,35 @@ class AudioDataset(torch.utils.data.Dataset):
         x_envelope = self._get_envelope(waveform_np)
         x_pitch = self._get_pitch(waveform_np)
 
-        # Return a dictionary with the waveform, envelope, and pitch
         return {
             'x': waveform.unsqueeze(0),
             'x_envelope': torch.tensor(x_envelope).unsqueeze(0),
             'x_pitch': torch.tensor(x_pitch).unsqueeze(0)
         }
     
-    def plot_item(self, i):
-        # Get the item at index i
-        item = self[i]
+
+    def plot_item(self, i: int):
+        """
+        Plots the waveform, envelope, and pitch of the audio sample at index i.
+
+        Parameters:
+        i (int): Index of the audio sample to plot.
+        """
         
         # Extract waveform, envelope, and pitch
+        item = self[i]
         waveform = item['x'].numpy()[0]
         envelope = item['x_envelope'].numpy()[0]
         pitch = item['x_pitch'].numpy()[0]
         t = np.linspace(0, len(waveform) / self.sr, len(waveform))
         
+        # Plot
         fig, axs = plt.subplots(2, 1, figsize=(10, 6))
-        # Plot waveform and envelope together
         axs[0].plot(t, waveform, label='Waveform', alpha=0.7)
         axs[0].plot(t[::self.latent_compression], envelope, label='Envelope', color='orange', alpha=0.7)
         axs[0].set_title('Waveform and Envelope')
         axs[0].legend(loc='upper right')
         
-        # Plot pitch (select the pitch values where they are detected)
         axs[1].plot(t[::self.latent_compression], pitch)
         axs[1].set_title('Pitch')
         

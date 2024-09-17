@@ -5,7 +5,10 @@
 from .balancer import Balancer, NoBalancer
 from .losses import L1TemporalLoss, L2TemporalLoss, AuralossLoss, KLDivergenceLoss
 from .discriminator import Discriminator
+
 import torch
+from torch import Tensor
+import typing as tp
 
 example_cfg = {
     'L1TemporalLoss':{
@@ -55,7 +58,7 @@ from torch import nn
 
 class CraftLosses(nn.Module):
 
-    def __init__(self, **losses_config):
+    def __init__(self, **losses_config) -> None:
         super().__init__()
 
         self.balancer_config = {}
@@ -95,7 +98,7 @@ class CraftLosses(nn.Module):
         self.balancer = Balancer(self.balancer_config)
         self.nobalancer = NoBalancer(self.nobalancer_config)
 
-    def backward(self, info, logging = True):
+    def backward(self, info: tp.Dict[str, Tensor], logging: bool = True) -> tp.Optional[tp.Dict[str, Tensor]]:
 
         all_losses = self.discriminator.generator_loss(info['x'], info['x_hat'])
 

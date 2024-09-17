@@ -55,6 +55,7 @@ class LitAutoEncoder(pl.LightningModule):
 
         # Placeholder for the first batch, first audio samples
         self.first_audio_sample = None
+        self.log_audio_epoch = 1
         
     def forward(self, x):
         info = self.model(x)
@@ -75,9 +76,10 @@ class LitAutoEncoder(pl.LightningModule):
         # Compute loss
         info = self.forward(x)
 
-        loss = F.l1_loss(info['x'],info['x_hat'])
-        loss.backward()
-        log_dict = {'global_loss': loss}
+        #loss = F.l1_loss(info['x'],info['x_hat'])
+        #loss.backward()
+        #log_dict = {'global_loss': loss}
+        log_dict = self.loss.backward(info)
 
         # Log the average gradient of parameters
         avg_gradients = torch.mean(torch.stack([torch.mean(p.grad) for p in self.parameters() if p.grad is not None]))
@@ -114,7 +116,7 @@ class LitAutoEncoder(pl.LightningModule):
     def on_train_epoch_end(self):        
         #print('here')
         
-        if (self.first_audio_sample is not None) and (self.current_epoch % 1 == 0) and hasattr(self.logger.experiment, 'log'):
+        if (self.first_audio_sample is not None) and (self.current_epoch % self.log_audio_epoch == 0) and hasattr(self.logger.experiment, 'log'):
             
             # Get the first audio sample
             #print(self.first_audio_sample.device)

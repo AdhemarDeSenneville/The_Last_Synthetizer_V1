@@ -1,8 +1,11 @@
+# Code from Adhémar de Senneville and https://github.com/NVIDIA/BigVGAN/blob/main/activations.py
+# Activation Utils
 
 import torch
 from torch import nn
+from torch import Tensor
 
-def get_activation(activation_name: str, in_features: int = None):
+def get_activation(activation_name: str, in_features: int = None) -> nn.Module:
     activations = {
         "relu": nn.ReLU(),
         "gelu": nn.GELU(),
@@ -35,7 +38,7 @@ class SnakeBeta(nn.Module):
 
         self.no_div_by_zero = 0.000000001
 
-    def forward(self, x):
+    def forward(self, x: Tensor) -> Tensor:
         alpha = self.alpha.unsqueeze(0).unsqueeze(-1) # line up with x to [B, C, T]
         beta = self.beta.unsqueeze(0).unsqueeze(-1)
         if self.alpha_logscale:

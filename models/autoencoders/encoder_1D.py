@@ -1,12 +1,18 @@
-# Code from Adhémar de Senneville
-# Fully conv Auto-encoder
+"""
+Code from Adhémar de Senneville
+
+Fully Convolutional Autoencoder
+
+Key Features:
+- ResNet Blocks: ResNet 1D Conv Blocks. With Groupnorm + Custom Activation Functions
+- LSTM Layers: Optional bidirectional LSTM (Non Streamable) layer befor last convolution for high temporal recepive field.
+- Variational AE: Optional Variational mode.
+"""
 
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 from torch import Tensor
 
-import typing as tp
 from typing import List
 from math import prod
 from torch import nn
