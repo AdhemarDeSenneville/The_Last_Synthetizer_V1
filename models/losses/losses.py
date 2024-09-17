@@ -1,8 +1,6 @@
-# Inspired by stable_audio_tools
-# added AuralossLoss and NoBalancer, changed atributs
+# Code from Adhémar de Senneville
 
 import typing as tp
-
 import torch
 from torch import nn
 from .auraloss import MultiResolutionSTFTLoss

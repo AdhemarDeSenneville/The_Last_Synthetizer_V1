@@ -6,6 +6,7 @@ import torch.nn as nn
 from torch import Tensor
 import typing as tp
 
+from .activation import get_activation
 
 def Conv1d(*args, **kwargs) -> nn.Module:
     return nn.Conv1d(*args, **kwargs)
@@ -55,7 +56,7 @@ class ConvBlock1d(nn.Module):
             dilation: int = 1,
             num_groups: int = 4,
             use_norm: bool = True,
-            activation: tp.Type[nn.Module] = nn.ReLU,
+            activation: str = 'relu',
         ) -> None:
         super().__init__()
 
@@ -65,7 +66,9 @@ class ConvBlock1d(nn.Module):
             if use_norm and in_channels % num_groups == 0
             else nn.Identity()
         )
-        self.activation = activation()
+
+        self.activation = get_activation(activation, in_features=in_channels)
+
         self.project = Conv1d(
             in_channels=in_channels,
             out_channels=out_channels,

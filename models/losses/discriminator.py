@@ -1,5 +1,5 @@
 # Code from Adhémar de Senneville
-# Close to Encodec with 1 frequency resolution
+# Close to Encodec one with 1 frequency resolution
 
 import torch
 import torch.nn as nn

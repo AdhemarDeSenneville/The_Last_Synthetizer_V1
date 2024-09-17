@@ -27,7 +27,7 @@ class ResnetBlock1d(nn.Module):
         dilation: int = 1,
         use_norm: bool = True,
         num_groups: int = 4,
-        activation: tp.Type[nn.Module] = nn.ReLU,
+        activation: str = 'relu',
     ) -> None:
         super().__init__()
 
@@ -70,7 +70,7 @@ class Encoder1d(nn.Module):
         channels: List[int],
         factors: List[int],
         res_blocks: int = 2,
-        activation: tp.Type[nn.Module] = nn.ReLU,
+        activation: str = 'relu',
         use_norm: bool = True,
         num_groups: int = 4,
         variational: bool = True,
@@ -152,7 +152,7 @@ class Decoder1d(nn.Module):
         channels: List[int],
         factors: List[int],
         res_blocks: int = 2,
-        activation: tp.Type[nn.Module] = nn.ReLU,
+        activation: str = 'relu',
         use_norm: bool = True,
         num_groups: int = 4,
         variational: bool = True,
@@ -245,7 +245,7 @@ if __name__ == '__main__':
         'channels': [16, 32, 64, 64],
         'factors': [4, 4, 4, 4],
         'res_blocks': 2,
-        'activation': nn.SiLU,
+        'activation': 'Snake',
         'use_norm': True,
         'num_groups': 4,
         'variational': True,
