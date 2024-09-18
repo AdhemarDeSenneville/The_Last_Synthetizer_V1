@@ -1,8 +1,10 @@
+# Code from Adhémar de Senneville
+# Launch a AE Training
 
 from training.VAE_training import LitAutoEncoder
 from data.data import AudioDataset
 from pytorch_lightning import Trainer
-from torch.utils.data import random_split, DataLoader, TensorDataset, Dataset
+from torch.utils.data import DataLoader
 from pytorch_lightning.callbacks import *
 
 class TrainerWarper():

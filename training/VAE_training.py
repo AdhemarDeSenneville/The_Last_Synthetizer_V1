@@ -1,36 +1,20 @@
-
-# Imports
-import numpy as np # linear algebra
-#import pandas as pd # data processing, CSV file I/O (e.g. pd.read_csv)
-import os
-import random
-import time
-import sys
-import gc
-import yaml
-import pickle
-from math import floor
-from typing import Any, Dict, List, Optional, Sequence, Tuple, Union
+# Code from Adhémar de Senneville
+# AE Training Code
 
 # Imports Torch
 import torch
-import torchaudio
-import torch.nn as nn
-import torch.nn.functional as F
-from torch.utils.data import random_split, DataLoader, TensorDataset, Dataset
-from torch.nn.utils.rnn import pad_sequence
+from torch import Tensor
 import pytorch_lightning as pl
+
+# Imports
+import numpy as np
+from typing import Any, Dict, List, Optional, Sequence, Tuple, Union
 
 # Imports Autre
 import librosa
 import matplotlib.pyplot as plt
-import scipy.io.wavfile as wav
-import scipy.signal as signal
-import IPython.display as ipd
 from matplotlib import pyplot as plt
 import wandb
-from pytorch_lightning.loggers import WandbLogger
-#import seaborn as sns
 
 from models.autoencoders.encoder_1D import Autoencoder1d
 from models.losses.factory import CraftLosses
@@ -38,11 +22,12 @@ from models.losses.factory import CraftLosses
 class LitAutoEncoder(pl.LightningModule):
     def __init__(
             self,
-            model_cfg,
-            data_cfg,
-            optimizer_cfg,
-            loss_cfg):
-        super(LitAutoEncoder, self).__init__()
+            model_cfg: Dict,
+            data_cfg: Dict,
+            optimizer_cfg: Dict,
+            loss_cfg: Dict
+        ) -> None:
+        super().__init__()
         self.save_hyperparameters() # for wandb
         
         # Model init
@@ -57,12 +42,12 @@ class LitAutoEncoder(pl.LightningModule):
         self.first_audio_sample = None
         self.log_audio_epoch = 1
         
-    def forward(self, x):
+    def forward(self, x: Tensor) -> Dict[str, Tensor]:
         info = self.model(x)
         info['x'] = x
         return info
     
-    def count_parameters(self):
+    def count_parameters(self) -> int:
         return sum(p.numel() for p in self.parameters() if p.requires_grad)
     
     def training_step(self, batch, batch_idx):
@@ -75,30 +60,26 @@ class LitAutoEncoder(pl.LightningModule):
         
         # Compute loss
         info = self.forward(x)
-
-        #loss = F.l1_loss(info['x'],info['x_hat'])
-        #loss.backward()
-        #log_dict = {'global_loss': loss}
         log_dict = self.loss.backward(info)
+        #loss = F.l1_loss(info['x'],info['x_hat']);loss.backward();log_dict = {'global_loss': loss}
 
-        # Log the average gradient of parameters
-        avg_gradients = torch.mean(torch.stack([torch.mean(p.grad) for p in self.parameters() if p.grad is not None]))
+        # Log average absolute gradient
+        avg_gradients = torch.mean(torch.stack([torch.mean(torch.abs(p.grad)) for p in self.parameters() if p.grad is not None]))
         log_dict['avg_gradient'] = avg_gradients
 
-        ## Grad Update
+        # Grad Update
         optimiser_ae, optimiser_discriminator = self.optimizers()
-        
-        #log_dict = self.loss.backward(info)
+
         optimiser_ae.step()
         optimiser_ae.zero_grad()
 
-        #if batch_idx % self.update_freq_discriminator == 0:
-        #    log_dict['discriminator_loss'] = self.loss.backward_discriminator(info)
-        #    optimiser_discriminator.step()
-        #    optimiser_discriminator.zero_grad()
+        if batch_idx % self.update_freq_discriminator == 0:
+            log_dict['discriminator_loss'] = self.loss.backward_discriminator(info)
+            optimiser_discriminator.step()
+            optimiser_discriminator.zero_grad()
 
         # Log
-        self.log_dict(log_dict) #, on_step=True, on_epoch=True
+        self.log_dict(log_dict)
         return None
     
     def predict_step(self, batch, batch_idx):
@@ -106,37 +87,32 @@ class LitAutoEncoder(pl.LightningModule):
         return info
 
     def configure_optimizers(self):
-        self.automatic_optimization = False  # Use manual optimization
+
+        # WARNING: Add more control over discriminator optimizer_cfg update_freq_discriminator
+        self.automatic_optimization = False
         self.update_freq_discriminator = 2
+
         # Define two optimizers
         optimiser_ae = torch.optim.Adam(self.model.parameters(), **self.optimizer_cfg)
         optimiser_discriminator = torch.optim.Adam(self.loss.discriminator.parameters(), **self.optimizer_cfg)
         return [optimiser_ae, optimiser_discriminator]
     
-    def on_train_epoch_end(self):        
-        #print('here')
+    def on_train_epoch_end(self) -> None:
         
         if (self.first_audio_sample is not None) and (self.current_epoch % self.log_audio_epoch == 0) and hasattr(self.logger.experiment, 'log'):
             
             # Get the first audio sample
-            #print(self.first_audio_sample.device)
             original_audio = self.first_audio_sample[0][0].cpu().numpy()
             reconstructed_audio = self.forward(self.first_audio_sample)['x_hat'][0][0].cpu().detach().numpy()
             
-            # Ensure the audio data is in the correct range and format
+            # Ensure the audio data is in the correct format
             if original_audio.dtype != 'float32':
                 original_audio = original_audio.astype('float32')
             if reconstructed_audio.dtype != 'float32':
                 reconstructed_audio = reconstructed_audio.astype('float32')
-
-            # Normalize audio to be in the range -1.0 to 1.0
-            # original_audio /= np.max(np.abs(original_audio), axis=-1, keepdims=True)
-            # reconstructed_audio /= np.max(np.abs(reconstructed_audio), axis=-1, keepdims=True)
-            # print(original_audio.shape)
-            # print(reconstructed_audio.shape)
             
             # Log Audios
-            if self.current_epoch==1:
+            if self.current_epoch==0:
                 self.logger.experiment.log({
                     "original_audio": wandb.Audio(original_audio, sample_rate=self.sr, caption="Original Audio"),
                     "epoch": self.current_epoch
@@ -146,7 +122,7 @@ class LitAutoEncoder(pl.LightningModule):
                 "epoch": self.current_epoch
             })
             
-            if False:
+            if False: # No need for spectrogram plotting for now
                 ori_path = 'fig/original_spectrogram.png'
                 rec_path = 'fig/reconstructed_spectrogram.png'
                 # Compute spectrograms to decibel (dB) units

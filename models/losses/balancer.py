@@ -1,14 +1,17 @@
+# Code from https://github.com/facebookresearch/encodec/blob/main/encodec/balancer.py
+# It is MIT LICENSE
+
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 # All rights reserved.
 #
 # This source code is licensed under the license found in the
 # LICENSE file in the root directory of this source tree.
 
-import typing as tp
-
-import flashy
 import torch
 from torch import autograd
+
+import typing as tp
+import flashy
 
 # Adding a 'no' balancer (for KL loss ect.)
 class NoBalancer:

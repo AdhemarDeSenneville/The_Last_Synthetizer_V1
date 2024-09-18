@@ -5,6 +5,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torchaudio.transforms as transforms
+from torch import Tensor
 
 class Discriminator(nn.Module):
     def __init__(self, fft_size=1024, hop_frac=1/4, win_length=1024):
@@ -53,15 +54,16 @@ class Discriminator(nn.Module):
             )
         ])
 
-        freq_channels = fft_size//2 + 1 #- 2*1
 
         self.reduct_conv = nn.Sequential(
                 nn.Conv2d(C, 1, kernel_size=3),
                 nn.LeakyReLU()
             )
-        self.final_conv = nn.Conv1d(501, 1, kernel_size=3)
+        
+        # freq_channels = fft_size//2 + 1 #- 2*1
+        self.final_conv = nn.Conv1d(501, 1, kernel_size=3) # Not in Encodec
 
-    def forward(self, x):
+    def forward(self, x: Tensor) -> Tensor:
 
         self.stft = self.stft.to(x.device)
         
@@ -69,21 +71,16 @@ class Discriminator(nn.Module):
         x = self.stft(x)
         x = torch.stack([x[:,0,...].real, x[:,0,...].imag], dim=1)
         
-
-        features = {}
         for l, block in enumerate(self.blocks):
+            # For debugging
             x = block(x)
-            #print(l, x.shape)
-            features[l] = x
 
         x = self.reduct_conv(x).squeeze(1)
-        #print(x.shape)
         x = self.final_conv(x).squeeze(1)
-        #print(x.shape)
 
         return x
 
-    def discriminator_loss(self, x, x_hat):
+    def discriminator_loss(self, x: Tensor, x_hat: Tensor) -> Tensor:
 
         score_fake = self(x_hat.detach())
         score_real = self(x)
@@ -91,14 +88,12 @@ class Discriminator(nn.Module):
         discriminator_loss = torch.relu(1 - score_real).mean() + torch.relu(1 + score_fake).mean()
 
         return discriminator_loss
-
     
-    def generator_loss(self, x, x_hat):
-        # Generator loss
+    def generator_loss(self, x: Tensor, x_hat: Tensor):
 
         feature_loss = 0.0
         
-        with torch.no_grad():
+        with torch.no_grad(): # Decreases computation cost
             x = self.stft(x)
             x = torch.stack([x[:,0,...].real, x[:,0,...].imag], dim=1)
         
@@ -110,7 +105,7 @@ class Discriminator(nn.Module):
                 x = block(x)
             x_hat = block(x_hat)
 
-            feature_loss += F.l1_loss(x, x_hat)/torch.norm(x,1)
+            feature_loss += F.l1_loss(x, x_hat, reduction='none')/torch.norm(x,1)
         
         x_hat = self.reduct_conv(x_hat).squeeze(1)
         score_fake = self.final_conv(x_hat).squeeze(1)
@@ -125,21 +120,18 @@ class Discriminator(nn.Module):
 
     
 if __name__ == "__main__":
-    # Test input: batch of audio signals with shape (B, 2, T)
-    B, T = 4, 44000  # Batch size 4, 16000 samples (1 second at 16 kHz)
-    test_input = torch.randn(B, 1, T)  # Random tensor simulating audio input
-    test_hattt = torch.randn(B, 1, T)  # Random tensor simulating audio input
+    # Test input: batch of audio signals with shape (B, 1, T)
+    B, T = 4, 44000 
+    test_input = torch.randn(B, 1, T)
+    test_hattt = torch.randn(B, 1, T)
 
-    model = Discriminator()  # Initialize the model
+    model = Discriminator()
 
     # Perform inference
     output = model(test_input)
-
     print(model.generator_loss(test_input,test_hattt))
     print(model.discriminator_loss(test_input,test_hattt))
 
-
     # Print the output shape
     print("Output shape:", output.shape)
-
     print("Number of trainable parameters:", sum(p.numel() for p in model.parameters() if p.requires_grad))

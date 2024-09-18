@@ -1,6 +1,5 @@
-# Code from Adhémar de Senneville
+# Code from Adhémar de Senneville inspired by https://github.com/archinetai/audio-encoders-pytorch
 # Simplified conv Modules
-
 
 import torch.nn as nn
 from torch import Tensor
@@ -15,9 +14,7 @@ def ConvTranspose1d(*args, **kwargs) -> nn.Module:
     return nn.ConvTranspose1d(*args, **kwargs)
 
 
-def Downsample1d(
-    in_channels: int, out_channels: int, factor: int, kernel_multiplier: int = 2
-) -> nn.Module:
+def Downsample1d(in_channels: int, out_channels: int, factor: int, kernel_multiplier: int = 2) -> nn.Module:
     assert kernel_multiplier % 2 == 0, "Kernel multiplier must be even"
 
     return Conv1d(
@@ -48,7 +45,6 @@ class ConvBlock1d(nn.Module):
             self,
             in_channels: int,
             out_channels: int,
-            *,
             kernel_size: int = 3,
             stride: int = 1,
             padding: int = 1,

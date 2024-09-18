@@ -1,18 +1,15 @@
 # Code from Adhémar de Senneville
 # Fully conv Unet inpired from Diff A Riff
 
-from typing import Any, Dict, List, Optional, Sequence, Tuple, Union
-from math import prod
-
-
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 from torch import Tensor
-from torchaudio import transforms
 
-import typing as tp
+from typing import List
+from math import prod
+
 from ..modules.conv import ConvBlock1d, Conv1d, Upsample1d, Downsample1d
+from ..conditionning.utils import get_timestep_embedding
 from .utils import pre_process, post_process
 
 
@@ -22,14 +19,13 @@ class ResnetBlock1d(nn.Module):
         in_channels: int,
         out_channels: int,
         t_channels: int,
-        *,
         kernel_size: int = 3,
         stride: int = 1,
         padding: int = 1,
         dilation: int = 1,
         use_norm: bool = True,
         num_groups: int = 1,
-        activation: tp.Type[nn.Module] = nn.ReLU,
+        activation: str = 'relu',
     ) -> None:
         super().__init__()
 
@@ -81,13 +77,14 @@ class UNet1d(nn.Module):
         t_channels: int,
         t_factor: int,
         res_blocks: int = 2,
-        activation: tp.Type[nn.Module] = nn.ReLU,
+        activation: str = 'relu',
         use_norm: bool = True,
         num_groups: int = 4,
     ) -> None:
         super().__init__()
         
         # Encode step embedding
+        self.t_channels_in = t_channels
         t_channels_out = t_factor * t_channels
         self.dense_t = nn.Sequential(
             nn.Linear(t_channels    , t_channels_out),
@@ -112,7 +109,7 @@ class UNet1d(nn.Module):
                     )
                 )
                 in_channels = channels[i]
-            #if i < len(channels) - 1:
+
             layer.append(Downsample1d(in_channels=channels[i], out_channels=channels[i], factor=factors[i]))
             self.encoder.append(layer)
         
@@ -158,32 +155,26 @@ class UNet1d(nn.Module):
         x, x_length = pre_process(x, self.eff_padding)
         
         # Encode time
+        t = get_timestep_embedding(t, self.t_channels_in)
         t = self.dense_t(t)
 
-        # Encoder
+        # Encoder # Unoptimized, for debugging
         skips = []
         for layer in self.encoder:
             for block in layer[:-1]:
                 x = block(x,t)
-            skips.append(x)#; print(x.shape)
+            skips.append(x)
             x = layer[-1](x)
             
-
-        #print('B neck', x.shape)
         x = self.bottle_neck(x,t)
-        #print('B neck', x.shape)
 
         # Decoder
         skips = skips[::-1]
         for i, layer in enumerate(self.decoder):
-            #print(1,x.shape)
             x = layer[0](x)
-            #print(2,x.shape, skips[i].shape)
             x = torch.cat((x, skips[i]), dim=-2)
-            #print(3,x.shape)
             for block in layer[1:]:
                 x = block(x,t)
-                #print('Blok', x.shape)
 
         x = self.final_conv(x)
         x = post_process(x, x_length)
@@ -204,7 +195,7 @@ if __name__ == '__main__':
 
     # Example input tensor
     x_tensor = torch.randn(7, 16, 1025)
-    t_tensor = torch.randn(7, 64)
+    t_tensor = torch.randn(7)
 
     # Forward passl
     output_tensor = unet_model(x_tensor, t_tensor)

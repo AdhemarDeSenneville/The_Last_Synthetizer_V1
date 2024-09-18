@@ -17,7 +17,6 @@ def get_activation(activation_name: str, in_features: int = None) -> nn.Module:
 
 
 # Adapted from https://github.com/NVIDIA/BigVGAN/blob/main/activations.py under MIT license
-# License available in LICENSES/LICENSE_NVIDIA.txt
 class SnakeBeta(nn.Module):
 
     def __init__(self, in_features, alpha=1.0, alpha_trainable=True, alpha_logscale=True):
@@ -48,5 +47,6 @@ class SnakeBeta(nn.Module):
 
         return x
     
+# Could be optimized for sure, I have a ton of CUDA OOM errors here...
 def snake_beta(x, alpha, beta):
     return x + (1.0 / (beta + 0.000000001)) * pow(torch.sin(x * alpha), 2)

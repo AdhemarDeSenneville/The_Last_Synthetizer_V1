@@ -87,7 +87,6 @@ class CraftLosses(nn.Module):
             is_balancer = loss_config.pop('balancer')
 
             loss = globals()[loss_name](**loss_config)
-
             self.losses.append(loss)
 
             if is_balancer:
@@ -119,7 +118,7 @@ class CraftLosses(nn.Module):
         if logging:
             return all_losses
     
-    def backward_discriminator(self, info, logging = True):
+    def backward_discriminator(self, info: tp.Dict[str, Tensor], logging: bool = True) -> tp.Optional[Tensor]:
 
         discriminator_loss = self.discriminator.discriminator_loss(info['x'], info['x_hat'])
         discriminator_loss.backward()

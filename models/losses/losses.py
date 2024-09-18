@@ -1,8 +1,11 @@
 # Code from Adhémar de Senneville
+# Some usefull losses
 
-import typing as tp
 import torch
 from torch import nn
+
+import typing as tp
+
 from .auraloss import MultiResolutionSTFTLoss
 
 
@@ -65,13 +68,13 @@ class KLDivergenceLoss(LossModule):
         self.key_log_std = key_log_std
 
     def forward(self, info):
-        # Mean and log_std are the outputs of a Gaussian distribution, used for the KL divergence calculation
+
         mean = info[self.key_mean]
         log_std = info[self.key_log_std]
         
         # KL divergence between N(mean, std) and N(0, 1)
         kl_loss = -0.5 * torch.sum(1 + 2 * log_std - mean.pow(2) - torch.exp(2 * log_std), dim=-1)
-        kl_loss = kl_loss.mean()  # Mean over the batch
+        kl_loss = kl_loss.mean()
 
         return kl_loss
 

@@ -15,7 +15,6 @@ from torch import Tensor
 
 from typing import List
 from math import prod
-from torch import nn
 
 from ..modules.lstm import LSTM
 from ..modules.conv import ConvBlock1d, Conv1d, Upsample1d, Downsample1d
