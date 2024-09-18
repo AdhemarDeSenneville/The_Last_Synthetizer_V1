@@ -14,6 +14,8 @@ Encode and audio
 
 Variationna
 
+Balancer, changed so that we can monitor effective losses compare to other losses that are not usable in the balancer like the losses in the latente space like KL divergence in the case of a VAE of in the case of a VQ-VAE
+
 ## Conditionning
 A first conditioning is a mask conditioning 
 
