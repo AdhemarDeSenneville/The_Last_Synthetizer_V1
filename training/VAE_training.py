@@ -87,8 +87,8 @@ class LitAutoEncoder(pl.LightningModule):
             optimiser_discriminator.step()
             optimiser_discriminator.zero_grad()
 
-            avg_gradients = torch.mean(torch.stack([torch.mean(torch.abs(p.grad)) for p in self.loss.discriminator.parameters() if p.grad is not None]))
-            log_dict['discriminator_avg_gradient_AFTER'] = avg_gradients
+            #avg_gradients = torch.mean(torch.stack([torch.mean(torch.abs(p.grad)) for p in self.loss.discriminator.parameters() if p.grad is not None]))
+            #log_dict['discriminator_avg_gradient_AFTER'] = avg_gradients
 
         # Log
         self.log_dict(log_dict)
