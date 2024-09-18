@@ -105,7 +105,7 @@ class Discriminator(nn.Module):
                 x = block(x)
             x_hat = block(x_hat)
 
-            feature_loss += F.l1_loss(x, x_hat, reduction='none')/torch.norm(x,1)
+            feature_loss += torch.norm(x - x_hat,1)/torch.norm(x,1)
         
         x_hat = self.reduct_conv(x_hat).squeeze(1)
         score_fake = self.final_conv(x_hat).squeeze(1)

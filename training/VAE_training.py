@@ -88,8 +88,7 @@ class LitAutoEncoder(pl.LightningModule):
         return info
 
     def configure_optimizers(self):
-
-        # WARNING: Add more control over discriminator optimizer_cfg update_freq_discriminator
+        
         self.automatic_optimization = False
         self.update_freq_discriminator = self.discriminator_optimizer_cfg.pop('update_frequency')
 

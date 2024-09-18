@@ -16,6 +16,8 @@ example_config = {
     'rho': 7,
     'sigma_min': 0.002,
     'sigma_max': 80,
+    'dropout_cond_envelope': 0.2,
+    'dropout_cond_pitch': 0.2,
 }
 
 class LitDiffusion(pl.LightningModule):
@@ -44,6 +46,8 @@ class LitDiffusion(pl.LightningModule):
         self.sigma_max = diffusion_cfg['sigma_max']
         self.sigma_mean = (math.log(self.sigma_min) + math.log(self.sigma_max)) / 2
         self.sigma_std = (math.log(self.sigma_max) - math.log(self.sigma_min)) / math.sqrt(12)
+        self.dropout_cond_envelope = diffusion_cfg['dropout_cond_envelope']
+        self.dropout_cond_pitch = diffusion_cfg['dropout_cond_pitch']
 
     def configure_optimizers(self):
         return torch.optim.Adam(self.model.parameters(), **self.optimizer_cfg)
@@ -53,8 +57,14 @@ class LitDiffusion(pl.LightningModule):
         x = batch['x']
         z_envelope = batch['x_envelope']
         z_pitch = batch['x_pitch']
+
+        # conditional dropout
+        if torch.rand(1).item() < self.dropout_cond_envelope:
+            z_envelope = torch.zeros_like(z_envelope)
+        if torch.rand(1).item() < self.dropout_cond_pitch:
+            z_pitch = torch.zeros_like(z_pitch)
         
-        # Encode (could be avoid using stored dataset)
+        # Encode (could be avoid using stored latent dataset)
         with torch.no_grad():
             z = self.auto_encoder.encoder(x)        
         
@@ -79,10 +89,10 @@ class LitDiffusion(pl.LightningModule):
     
     def sample(
             self,
-            z_envelope,
-            z_pitch,
-            time = None,
-            num_steps=None,
+            time = 8,
+            z_envelope = None,
+            z_pitch = None,
+            num_steps = None,
             rho=None,
         ):
         
@@ -91,15 +101,19 @@ class LitDiffusion(pl.LightningModule):
         if rho is None:
             rho = self.rho
         
-        # Desired noised z, z_envelope, z_pitch
-        if time is not None:
-            compression = self.auto_encoder.model.eff_padding
-            sr = self.auto_encoder.sr
-            sample_number = int(time*sr/compression)
-        else:
-            sample_number = len(z_envelope)
+        if z_envelope is None and z_pitch is None:
+            z_sample_number = int(time*self.auto_encoder.sr/self.auto_encoder.model.eff_padding)
+            z_envelope = [0]*z_sample_number
+            z_pitch = [0]*z_sample_number
+        elif z_envelope is None:
+            z_sample_number = len(z_pitch)
+            z_envelope = [0]*z_sample_number
+        elif z_pitch is None:
+            z_sample_number = len(z_envelope)
+            z_pitch = [0]*z_sample_number
 
-        z_init = torch.randn([1, self.latent_channel, sample_number], device=self.device)
+
+        z_init = torch.randn([1, self.latent_channel, z_sample_number], device=self.device)
         z_envelope = torch.tensor(z_envelope, device=self.device).unsqueeze(0).unsqueeze(0)
         z_pitch = torch.tensor(z_pitch, device=self.device).unsqueeze(0).unsqueeze(0)
 
