@@ -34,7 +34,8 @@ class LitAutoEncoder(pl.LightningModule):
         self.model = Autoencoder1d(**model_cfg)
         
         # Training init
-        self.optimizer_cfg = optimizer_cfg
+        self.generator_optimizer_cfg = optimizer_cfg['generator']
+        self.discriminator_optimizer_cfg = optimizer_cfg['discriminator']
         self.sr = data_cfg['sr']
         self.loss = CraftLosses(**loss_cfg)
 
@@ -90,11 +91,11 @@ class LitAutoEncoder(pl.LightningModule):
 
         # WARNING: Add more control over discriminator optimizer_cfg update_freq_discriminator
         self.automatic_optimization = False
-        self.update_freq_discriminator = 2
+        self.update_freq_discriminator = self.discriminator_optimizer_cfg.pop('update_frequency')
 
         # Define two optimizers
-        optimiser_ae = torch.optim.Adam(self.model.parameters(), **self.optimizer_cfg)
-        optimiser_discriminator = torch.optim.Adam(self.loss.discriminator.parameters(), **self.optimizer_cfg)
+        optimiser_ae = torch.optim.Adam(self.model.parameters(), **self.generator_optimizer_cfg)
+        optimiser_discriminator = torch.optim.Adam(self.loss.discriminator.parameters(), **self.discriminator_optimizer_cfg)
         return [optimiser_ae, optimiser_discriminator]
     
     def on_train_epoch_end(self) -> None:
