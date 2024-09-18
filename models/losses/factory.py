@@ -103,20 +103,21 @@ class CraftLosses(nn.Module):
 
         for loss in self.losses:
             all_losses[loss.name] = loss(info)
-
-        self.all_losses = all_losses
         
         if len(self.nobalancer_config.keys()) != 0:
-            self.nobalancer.backward({key: all_losses[key] for key in self.nobalancer_config}, retain_graph=True)
+            effective_losses_nobalancer = self.nobalancer.backward({key: all_losses[key] for key in self.nobalancer_config}, retain_graph=True)
+        else:
+            effective_losses_nobalancer = {}
         
         if len(self.balancer_config.keys()) != 0:
-            self.balancer.backward({key: all_losses[key] for key in self.balancer_config}, info['x_hat'])
-
-        with torch.no_grad():
-            all_losses['global_loss'] = sum(all_losses.values())
+            effective_losses_balancer = self.balancer.backward({key: all_losses[key] for key in self.balancer_config}, info['x_hat'])
+        else:
+            effective_losses_balancer = {}
 
         if logging:
-            return all_losses
+            effective_losses = {**effective_losses_nobalancer, **effective_losses_balancer}
+            effective_losses['global_loss'] = sum(effective_losses.values())
+            return effective_losses
     
     def backward_discriminator(self, info: tp.Dict[str, Tensor], logging: bool = True) -> tp.Optional[Tensor]:
 

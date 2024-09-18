@@ -65,8 +65,11 @@ class LitAutoEncoder(pl.LightningModule):
         #loss = F.l1_loss(info['x'],info['x_hat']);loss.backward();log_dict = {'global_loss': loss}
 
         # Log average absolute gradient
-        avg_gradients = torch.mean(torch.stack([torch.mean(torch.abs(p.grad)) for p in self.parameters() if p.grad is not None]))
-        log_dict['avg_gradient'] = avg_gradients
+        avg_gradients = torch.mean(torch.stack([torch.mean(torch.abs(p.grad)) for p in self.model.parameters() if p.grad is not None]))
+        log_dict['generator_avg_gradient'] = avg_gradients
+
+        # Log Balancer relative weights
+        # TODO
 
         # Grad Update
         optimiser_ae, optimiser_discriminator = self.optimizers()
@@ -76,6 +79,11 @@ class LitAutoEncoder(pl.LightningModule):
 
         if batch_idx % self.update_freq_discriminator == 0:
             log_dict['discriminator_loss'] = self.loss.backward_discriminator(info)
+
+            # Log average absolute gradient
+            avg_gradients = torch.mean(torch.stack([torch.mean(torch.abs(p.grad)) for p in self.loss.discriminator.parameters() if p.grad is not None]))
+            log_dict['discriminator_avg_gradient'] = avg_gradients
+
             optimiser_discriminator.step()
             optimiser_discriminator.zero_grad()
 

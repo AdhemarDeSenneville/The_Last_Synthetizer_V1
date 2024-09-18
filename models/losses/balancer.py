@@ -21,12 +21,16 @@ class NoBalancer:
     def backward(self, losses: tp.Dict[str, torch.Tensor], retain_graph=False):
 
         total_loss = 0.0
+        log_loss = {}
 
         for name, value in losses.items():
-            total_loss += value * self.weights[name]
+            loss = value * self.weights[name]
+            total_loss += loss
+            log_loss[name] = loss.item()
         
         total_loss.backward(retain_graph = retain_graph)
 
+        return log_loss
 
 class Balancer:
     """Loss balancer.
@@ -138,7 +142,7 @@ class Balancer:
         desired_ratios = {k: w / total_weights for k, w in self.weights.items()}
 
         out_grad = torch.zeros_like(input)
-        effective_loss = torch.tensor(0., device=input.device, dtype=input.dtype)
+        log_loss = {}
         for name, avg_norm in avg_norms.items():
             if self.balance_grads:
                 # g_balanced = g / avg(||g||) * total_norm * desired_ratio
@@ -147,7 +151,8 @@ class Balancer:
                 # We just do regular weighted sum of the gradients.
                 scale = self.weights[name]
             out_grad.add_(grads[name], alpha=scale)
-            effective_loss += scale * losses[name].detach()
+
+            log_loss[name] = (scale * losses[name]).item()
         # Send the computed partial derivative with respect to the output of the model to the model.
         input.backward(out_grad)
-        return effective_loss
+        return log_loss
