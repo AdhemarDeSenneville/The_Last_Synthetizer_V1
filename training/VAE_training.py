@@ -76,6 +76,7 @@ class LitAutoEncoder(pl.LightningModule):
 
         optimiser_ae.step()
         optimiser_ae.zero_grad()
+        optimiser_discriminator.zero_grad()
 
         if batch_idx % self.update_freq_discriminator == 0:
             log_dict['discriminator_loss'] = self.loss.backward_discriminator(info)
@@ -86,9 +87,6 @@ class LitAutoEncoder(pl.LightningModule):
 
             optimiser_discriminator.step()
             optimiser_discriminator.zero_grad()
-
-            #avg_gradients = torch.mean(torch.stack([torch.mean(torch.abs(p.grad)) for p in self.loss.discriminator.parameters() if p.grad is not None]))
-            #log_dict['discriminator_avg_gradient_AFTER'] = avg_gradients
 
         # Log
         self.log_dict(log_dict)
