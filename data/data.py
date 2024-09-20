@@ -107,14 +107,24 @@ class AudioDataset(torch.utils.data.Dataset):
         """
     
         # Extract pitch from  magnitude
-        pitches, _ = librosa.piptrack(y=x, sr=self.sr, **self.pitch_detector_config)
-        x_pitch = np.max(pitches, axis=0)
+        #pitches, _ = librosa.piptrack(y=x, sr=self.sr, **self.pitch_detector_config)
+        #x_pitch = np.max(pitches, axis=0)
         
         # Interpolate
-        original_len = len(x_pitch)
-        target_len = ceil(len(x) / self.latent_compression)
-        interpolator = interp1d(np.arange(original_len), x_pitch, kind='linear', fill_value="extrapolate")
-        x_pitch = interpolator(np.linspace(0, original_len - 1, target_len))
+        #original_len = len(x_pitch)
+        #target_len = ceil(len(x) / self.latent_compression)
+        #interpolator = interp1d(np.arange(original_len), x_pitch, kind='linear', fill_value="extrapolate")
+        #x_pitch = interpolator(np.linspace(0, original_len - 1, target_len))
+
+        pitches, magnitudes = librosa.core.piptrack(
+            y=x, 
+            sr=self.sr, 
+            hop_length=self.latent_compression, 
+            center=True, 
+            **self.pitch_detector_config,
+        )
+        max_indexes = np.argmax(magnitudes, axis=0)
+        x_pitch = pitches[max_indexes, range(magnitudes.shape[1])]
 
         return x_pitch
 

@@ -1,0 +1,29 @@
+loss_cfg:
+  L1TemporalLoss:
+    weight: 10
+    balancer: false
+    key_output: x_hat
+    key_target: x
+  L2TemporalLoss:
+    weight: 100
+    balancer: false
+    key_output: x_hat
+    key_target: x
+  AuralossLoss:
+    weight: 1
+    balancer: false
+    key_output: x_hat
+    key_target: x
+    fft_sizes: [32, 128, 512, 2048]
+    hop_sizes: [16, 64, 256, 1024]
+    win_lengths: [32, 128, 512, 2048]
+    w_sc: 0.0
+    w_phs: 0.0
+    w_lin_mag: 1.0
+    w_log_mag: 1.0
+  Discriminator:
+    weight: 0.2
+    balancer: false
+  FeatureLoss:
+    weight: 1
+    balancer: false

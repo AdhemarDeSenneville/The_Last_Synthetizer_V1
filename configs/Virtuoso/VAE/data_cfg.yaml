@@ -1,0 +1,19 @@
+data_cfg:
+  path: !!python/name:DATA_PATH ''
+  sr: 22050
+  sample_duration: 8  # Seconds
+  latent_compression: 256
+  envelope_detector:
+    type: Max
+  pitch_detector:
+    n_fft: 4096
+    hop_length: 1024
+    fmin: 75
+    fmax: 800
+    threshold: 0.15
+    win_length: null  # Defaults to n_fft
+    window: hann
+    center: true
+    pad_mode: reflect
+  batch_size: 4
+  num_workers: 0

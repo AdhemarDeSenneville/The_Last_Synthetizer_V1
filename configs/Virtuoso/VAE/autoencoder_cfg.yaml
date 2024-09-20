@@ -1,0 +1,11 @@
+model_cfg:
+  in_channels: 1
+  out_channels: 16
+  channels: [8, 16, 32, 64]
+  factors: [4, 4, 4, 4]
+  res_blocks: 4
+  activation: SiLU
+  use_norm: true
+  num_groups: 2
+  variational: true
+  lstm: true
